@@ -3,7 +3,6 @@
 const express = require("express");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const encrypt = require("mongoose-encryption");
 require("dotenv").config();
 
 mongoose
@@ -27,11 +26,6 @@ const usersSchema = new mongoose.Schema({
     required: true,
     type: String,
   },
-});
-
-usersSchema.plugin(encrypt, {
-  secret: process.env.ENC_KEY,
-  encryptedFields: ["password"],
 });
 
 // Routes
