@@ -11,6 +11,8 @@ mongoose
 
 const app = express();
 
+app.set("view engine", "ejs");
+
 app.use(express.static("public"));
 
 app.use(express.urlencoded({ extended: true }));
@@ -27,10 +29,6 @@ const usersSchema = new mongoose.Schema({
     required: true,
     type: String,
   },
-  saltKey: {
-    required: true,
-    type: String,
-  },
 });
 
 const User = new mongoose.model("user", usersSchema);
@@ -38,24 +36,21 @@ const User = new mongoose.model("user", usersSchema);
 // Routes
 
 app.get("/", (req, res) =>
-  ejs.renderFile(__dirname + "/ejs/home.ejs", (err, str) => res.send(str))
+  // ejs.renderFile(__dirname + "/ejs/home.ejs", (err, str) => res.send(str))
+  res.render("home")
 );
 
 app
   .route("/register")
   .get((req, res) => {
-    ejs.renderFile(__dirname + "/ejs/register.ejs", (err, str) => {
-      res.send(str);
-    });
+    res.render("register");
   })
   .post((req, res) => {});
 
 app
   .route("/login")
   .get((req, res) => {
-    ejs.renderFile(__dirname + "/ejs/login.ejs", (err, str) => {
-      res.send(str);
-    });
+    res.render("login");
   })
   .post((req, res) => {});
 
