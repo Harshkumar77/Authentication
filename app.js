@@ -3,6 +3,7 @@
 const express = require("express");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
+const salt = require("./salt");
 require("dotenv").config();
 
 mongoose
@@ -21,16 +22,21 @@ const usersSchema = new mongoose.Schema({
   email: {
     required: true,
     type: String,
+    unique: true,
   },
   password: {
     required: true,
     type: String,
   },
+  saltKey: {
+    required: true,
+    type: String,
+  },
 });
 
-// Routes
-
 const User = new mongoose.model("user", usersSchema);
+
+// Routes
 
 app.get("/", (req, res) =>
   ejs.renderFile(__dirname + "/ejs/home.ejs", (err, str) => res.send(str))
@@ -44,13 +50,23 @@ app
     });
   })
   .post((req, res) => {
-    console.log(req.body);
-    new User(req.body).save().then((doc) => {
-      console.log(doc);
-      ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
-        res.send(str);
+    const salting = salt.salting(process.env.SALTING_ROUNDS, req.body.password);
+    new User({
+      email: req.body.email,
+      password: salting[0],
+      saltKey: salting[1],
+    })
+      .save()
+      .then((doc) => {
+        console.log(doc);
+        ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
+          res.send(str);
+        });
+      })
+      .catch((err) => {
+        res.redirect("/register");
+        console.error(err);
       });
-    });
   });
 
 app
@@ -61,14 +77,25 @@ app
     });
   })
   .post((req, res) => {
-    console.log(req.body);
-    User.findOne(req.body)
+    User.findOne({
+      email: req.body.email,
+    })
       .exec()
       .then((doc) => {
-        if (doc)
-          ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
-            res.send(str);
-          });
+        if (doc) {
+          if (
+            salt.reverseSalting(
+              process.env.SALTING_ROUNDS,
+              req.body.password,
+              doc.saltKey
+            ) === doc.password
+          )
+            ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
+              res.send(str);
+            });
+        } else {
+          res.redirect("/login");
+        }
       });
   });
 
