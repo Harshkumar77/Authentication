@@ -3,7 +3,6 @@
 const express = require("express");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const salt = require("./salt");
 require("dotenv").config();
 
 mongoose
@@ -49,25 +48,7 @@ app
       res.send(str);
     });
   })
-  .post((req, res) => {
-    const salting = salt.salting(process.env.SALTING_ROUNDS, req.body.password);
-    new User({
-      email: req.body.email,
-      password: salting[0],
-      saltKey: salting[1],
-    })
-      .save()
-      .then((doc) => {
-        console.log(doc);
-        ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
-          res.send(str);
-        });
-      })
-      .catch((err) => {
-        res.redirect("/register");
-        console.error(err);
-      });
-  });
+  .post((req, res) => {});
 
 app
   .route("/login")
@@ -76,28 +57,7 @@ app
       res.send(str);
     });
   })
-  .post((req, res) => {
-    User.findOne({
-      email: req.body.email,
-    })
-      .exec()
-      .then((doc) => {
-        if (doc) {
-          if (
-            salt.reverseSalting(
-              process.env.SALTING_ROUNDS,
-              req.body.password,
-              doc.saltKey
-            ) === doc.password
-          )
-            ejs.renderFile(__dirname + "/ejs/secret.ejs", (err, str) => {
-              res.send(str);
-            });
-        } else {
-          res.redirect("/login");
-        }
-      });
-  });
+  .post((req, res) => {});
 
 app.listen(process.env.PORT, () => {
   console.log(`Server is running at port ${process.env.PORT}`);
