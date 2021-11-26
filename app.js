@@ -77,7 +77,7 @@ passport.deserializeUser((id, done) => {
 /************************** Routes ************************************/
 
 app.get("/", (req, res) => {
-  if (req.user) res.render("secret");
+  if (req.user) res.redirect("secret");
   else res.render("home");
 });
 app
@@ -103,7 +103,7 @@ app
 app
   .route("/login")
   .get((req, res) => {
-    if (req.user) res.render("secret");
+    if (req.user) res.redirect("secret");
     else res.render("login");
   })
   .post(
