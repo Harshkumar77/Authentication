@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const passport = require("passport");
 const localStrategy = require("passport-local").Strategy;
+const salt = require("./salt");
 
 /************************** Server Configs ************************************/
 
@@ -28,6 +29,10 @@ const usersSchema = new mongoose.Schema({
     required: true,
     type: String,
   },
+  saltKey: {
+    required: true,
+    type: String,
+  },
 });
 
 const User = mongoose.model("user", usersSchema);
@@ -37,7 +42,14 @@ const auth = (username, password, done) => {
     .exec()
     .then((doc) => {
       if (!doc) return done(null, false);
-      if (doc.password === password) return done(null, doc);
+      if (
+        salt.reverseSalting(
+          process.env.SALTING_ROUND,
+          password,
+          doc.saltKey
+        ) === doc.password
+      )
+        return done(null, doc);
     })
     .catch((err) => {
       return done(err);
@@ -75,7 +87,8 @@ app
     res.render("register");
   })
   .post((req, res) => {
-    new User(req.body)
+    const enc = salt.salting(process.env.SALTING_ROUND, req.body.password);
+    new User({ email: req.body.email, password: enc[0], saltKey: enc[1] })
       .save()
       .then((doc) => {
         req.logIn(doc, (err) => console.error(err));
