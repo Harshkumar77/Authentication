@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config();
+const passport = require("passport");
+const localStrategy = require("passport-local").Strategy;
 
 /************************** Server Configs ************************************/
 
@@ -28,25 +30,85 @@ const usersSchema = new mongoose.Schema({
   },
 });
 
-const User = new mongoose.model("user", usersSchema);
+const User = mongoose.model("user", usersSchema);
+
+const auth = (username, password, done) => {
+  User.findOne({ email: username })
+    .exec()
+    .then((doc) => {
+      if (!doc) return done(null, false);
+      if (doc.password === password) return done(null, doc);
+    })
+    .catch((err) => {
+      return done(err);
+    });
+};
+app.use(
+  require("express-session")({
+    secret: "hello",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new localStrategy({ usernameField: "email" }, auth));
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+passport.deserializeUser((id, done) => {
+  User.findById(id)
+    .exec()
+    .then((doc) => done(null, doc));
+});
 
 /************************** Routes ************************************/
 
-app.get("/", (req, res) => res.render("home"));
-
+app.get("/", (req, res) => {
+  if (req.user) res.render("secret");
+  else res.render("home");
+});
 app
   .route("/register")
   .get((req, res) => {
+    if (req.user) return res.redirect("/secret");
     res.render("register");
   })
-  .post((req, res) => {});
+  .post((req, res) => {
+    new User(req.body)
+      .save()
+      .then((doc) => {
+        req.logIn(doc, (err) => console.error(err));
+        res.redirect("/secret");
+      })
+      .catch((err) => {
+        console.error(err);
+        res.redirect("/");
+      });
+  });
 
 app
   .route("/login")
   .get((req, res) => {
-    res.render("login");
+    if (req.user) res.render("secret");
+    else res.render("login");
   })
-  .post((req, res) => {});
+  .post(
+    passport.authenticate("local", {
+      successRedirect: "/secret",
+      failureRedirect: "/login",
+    })
+  );
+
+app.get("/secret", (req, res) => {
+  if (req.user) res.render("secret");
+  else res.redirect("/login");
+});
+
+app.post("/logout", (req, res) => {
+  req.logOut();
+  res.redirect("/");
+});
 
 // Starting the server
 app.listen(process.env.PORT, () => {
