@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const passport = require("passport");
 const localStrategy = require("passport-local").Strategy;
 const googleStrategy = require("passport-google-oauth").OAuth2Strategy;
-const salt = require("./salt");
+const argon2 = require("argon2");
 
 /************************** Server Configs ************************************/
 
@@ -30,10 +30,6 @@ const usersSchema = new mongoose.Schema({
     required: true,
     type: String,
   },
-  saltKey: {
-    required: true,
-    type: String,
-  },
 });
 const googleUserSchema = new mongoose.Schema({
   name: {
@@ -54,14 +50,9 @@ const auth = (username, password, done) => {
     .exec()
     .then((doc) => {
       if (!doc) return done(null, false);
-      if (
-        salt.reverseSalting(
-          process.env.SALTING_ROUND,
-          password,
-          doc.saltKey
-        ) === doc.password
-      )
-        return done(null, doc);
+      argon2.verify(doc.password, password).then((res) => {
+        if (res) done(null, doc);
+      });
     })
     .catch((err) => {
       return done(err);
@@ -136,19 +127,23 @@ app
     res.render("register");
   })
   .post((req, res) => {
-    const enc = salt.salting(process.env.SALTING_ROUND, req.body.password);
-    new User({ email: req.body.email, password: enc[0], saltKey: enc[1] })
-      .save()
-      .then((doc) => {
-        req.logIn(doc, (err) => {
-          if (err) console.error(err);
-        });
-        res.redirect("/secret");
+    argon2.hash(req.body.password).then((hash) => {
+      new User({
+        email: req.body.email,
+        password: hash,
       })
-      .catch((err) => {
-        console.error(err);
-        res.redirect("/");
-      });
+        .save()
+        .then((doc) => {
+          req.logIn(doc, (err) => {
+            if (err) console.error(err);
+          });
+          res.redirect("/secret");
+        })
+        .catch((err) => {
+          console.error(err);
+          res.redirect("/");
+        });
+    });
   });
 
 app
