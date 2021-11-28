@@ -182,7 +182,7 @@ app.get(
   })
 );
 
-// Starting the server
+// Starting the server on port
 app.listen(process.env.PORT, () => {
   console.log(`Server is running at port ${process.env.PORT}`);
 });
