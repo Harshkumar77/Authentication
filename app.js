@@ -110,6 +110,14 @@ passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 passport.deserializeUser((id, done) => {
+  GoogleUser.findById(id)
+    .exec()
+    .then((doc) => {
+      if (doc) done(null, doc);
+      else done("pass");
+    });
+});
+passport.deserializeUser((id, done) => {
   User.findById(id)
     .exec()
     .then((doc) => done(null, doc));
