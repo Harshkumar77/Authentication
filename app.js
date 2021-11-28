@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const passport = require("passport");
 const localStrategy = require("passport-local").Strategy;
+const googleStrategy = require("passport-google-oauth").OAuth2Strategy;
 const salt = require("./salt");
 
 /************************** Server Configs ************************************/
@@ -34,8 +35,19 @@ const usersSchema = new mongoose.Schema({
     type: String,
   },
 });
+const googleUserSchema = new mongoose.Schema({
+  name: {
+    required: true,
+    type: String,
+  },
+  googleID: {
+    required: true,
+    type: String,
+  },
+});
 
 const User = mongoose.model("user", usersSchema);
+const GoogleUser = mongoose.model("googleUser", googleUserSchema);
 
 const auth = (username, password, done) => {
   User.findOne({ email: username })
@@ -65,6 +77,35 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new localStrategy({ usernameField: "email" }, auth));
+passport.use(
+  new googleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:3000/auth/google/callback",
+    },
+    (token, tokenSecret, profile, done) => {
+      GoogleUser.findOne({ googleID: profile.id })
+        .exec()
+        .then((doc) => {
+          if (doc) {
+            done(null, doc);
+          } else {
+            const newUser = new GoogleUser({
+              name: profile.displayName,
+              googleID: profile.id,
+            });
+            newUser
+              .save()
+              .then((doc) => done(null, doc))
+              .catch((err) => done(err));
+          }
+        })
+        .catch((err) => done(err));
+      console.log(profile);
+    }
+  )
+);
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
@@ -91,7 +132,9 @@ app
     new User({ email: req.body.email, password: enc[0], saltKey: enc[1] })
       .save()
       .then((doc) => {
-        req.logIn(doc, (err) => console.error(err));
+        req.logIn(doc, (err) => {
+          if (err) console.error(err);
+        });
         res.redirect("/secret");
       })
       .catch((err) => {
@@ -114,7 +157,8 @@ app
   );
 
 app.get("/secret", (req, res) => {
-  if (req.user) res.render("secret");
+  console.log(req.user);
+  if (req.isAuthenticated()) res.render("secret");
   else res.redirect("/login");
 });
 
@@ -122,6 +166,21 @@ app.post("/logout", (req, res) => {
   req.logOut();
   res.redirect("/");
 });
+
+app.get(
+  "/auth/google",
+  passport.authenticate("google", {
+    scope: ["https://www.googleapis.com/auth/plus.login"],
+  })
+);
+
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/",
+    successRedirect: "/secret",
+  })
+);
 
 // Starting the server
 app.listen(process.env.PORT, () => {
