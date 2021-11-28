@@ -1,6 +1,6 @@
+if (process.env.NODE_ENV !== "production") require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
-require("dotenv").config();
 const passport = require("passport");
 const localStrategy = require("passport-local").Strategy;
 const googleStrategy = require("passport-google-oauth").OAuth2Strategy;
@@ -69,7 +69,7 @@ const auth = (username, password, done) => {
 };
 app.use(
   require("express-session")({
-    secret: "hello",
+    secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
   })
