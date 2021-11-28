@@ -1,4 +1,7 @@
 {
+  "engines": {
+    "node": "16.13.0"
+  },
   "dependencies": {
     "argon2": "^0.28.3",
     "dotenv": "^10.0.0",
@@ -9,5 +12,24 @@
     "passport": "^0.5.0",
     "passport-google-oauth": "^2.0.0",
     "passport-local": "^1.0.0"
-  }
+  },
+  "name": "secrets",
+  "description": "### Boiler plate for implementing google oauth 2.0 with tradional username and password",
+  "version": "1.0.0",
+  "main": "app.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harshkumar77/Authentication.git"
+  },
+  "author": "Harsh Kumar",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Harshkumar77/Authentication/issues"
+  },
+  "homepage": "https://github.com/Harshkumar77/Authentication#readme"
 }
